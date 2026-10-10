@@ -1,12 +1,10 @@
--- Roblox - Steal an Egg Complete Script
--- GUI Library Integration
-
+-- Steal an Egg - Optimized Script by Assistant
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Steal an Egg | Hub 🥚",
-   LoadingTitle = "Loading Script...",
-   LoadingSubtitle = "by Assistant",
+   Name = "Steal an Egg | Pro Hub 🥚",
+   LoadingTitle = "Loading Fast Script...",
+   LoadingSubtitle = "Optimized & Lag-Free",
    ConfigurationSaving = { Enabled = false },
    Discord = { Enabled = false },
    KeySystem = false
@@ -14,103 +12,133 @@ local Window = Rayfield:CreateWindow({
 
 local MainTab = Window:CreateTab("Main Features 🚀", 4483362458)
 
--- Variables & Toggles
-local AutoSteal = false
-local AutoCollect = false
-local WalkSpeedValue = 16
-local JumpPowerValue = 50
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- Auto Steal Function
+local basePosition = nil
+local autoTeleportWithEgg = false
+local autoSteal = false
+
+-- 1. زر لتحديد مكان البيس الخاص بك
+MainTab:CreateButton({
+   Name = "📍 1. Set Current Position as Base (قف في بيسك واضغطه)",
+   Callback = function()
+      local char = LocalPlayer.Character
+      if char and char:FindFirstChild("HumanoidRootPart") then
+         basePosition = char.HumanoidRootPart.CFrame
+         Rayfield:Notify({
+            Title = "تم حفظ البيس بنجاح!",
+            Content = "سيتم نقلك إلى هذا المكان فور الإمساك بالبيضة.",
+            Duration = 3,
+         })
+      end
+   end,
+})
+
+-- 2. ميزة النقل التلقائي للبيس أول ما تمسك البيضة بدون لاق
 MainTab:CreateToggle({
-   Name = "Auto Steal Eggs 🥚",
+   Name = "⚡ 2. Auto Teleport to Base When Holding Egg",
    CurrentValue = false,
-   Flag = "AutoStealFlag",
+   Flag = "AutoTpEgg",
    Callback = function(Value)
-      AutoSteal = Value
+      autoTeleportWithEgg = Value
       task.spawn(function()
-         while AutoSteal do
+         while autoTeleportWithEgg do
+            task.wait(0.15) -- خفيف جداً ولا يسبب أي لاق في السيرفر
             pcall(function()
-               for _, v in pairs(workspace:GetDescendants()) do
-                  if v:IsA("ProximityPrompt") and string.find(string.lower(v.ObjectText or v.ActionText), "steal") then
-                     fireproximityprompt(v)
+               if not basePosition then return end
+               local char = LocalPlayer.Character
+               if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+               
+               local hasEgg = false
+               -- التحقق مما إذا كان اللاعب يمسك بيضة في يده أو حقيبته
+               for _, item in pairs(char:GetChildren()) do
+                  if item:IsA("Tool") and string.find(string.lower(item.Name), "egg") then
+                     hasEgg = true
+                     break
+                  end
+               end
+               
+               local bp = LocalPlayer:FindFirstChild("Backpack")
+               if bp and not hasEgg then
+                  for _, item in pairs(bp:GetChildren()) do
+                     if item:IsA("Tool") and string.find(string.lower(item.Name), "egg") then
+                        hasEgg = true
+                        break
+                     end
+                  end
+               end
+               
+               -- إذا مسك البيضة، يتم نقله فوراً لبيسه
+               if hasEgg then
+                  local rootPart = char.HumanoidRootPart
+                  if (rootPart.Position - basePosition.Position).Magnitude > 15 then
+                     rootPart.CFrame = basePosition
+                     task.wait(0.5) -- مهلة بسيطة لمنع التكرار المزعج
                   end
                end
             end)
-            task.wait(0.1)
          end
       end)
    end,
 })
 
--- Auto Collect Eggs Function
+-- 3. تجميع البيض التلقائي (Auto Steal) بدون مشاكل
 MainTab:CreateToggle({
-   Name = "Auto Collect Nearby Eggs ✨",
+   Name = "🥚 3. Fast Auto Steal Prompts",
    CurrentValue = false,
-   Flag = "AutoCollectFlag",
+   Flag = "AutoSteal",
    Callback = function(Value)
-      AutoCollect = Value
+      autoSteal = Value
       task.spawn(function()
-         while AutoCollect do
+         while autoSteal do
+            task.wait(0.2)
             pcall(function()
-               local char = game.Players.LocalPlayer.Character
-               if char and char:FindFirstChild("HumanoidRootPart") then
-                  for _, obj in pairs(workspace:GetChildren()) do
-                     if string.find(string.lower(obj.Name), "egg") and obj:IsA("BasePart") then
-                        obj.CFrame = char.HumanoidRootPart.CFrame
+               for _, v in pairs(workspace:GetDescendants()) do
+                  if v:IsA("ProximityPrompt") then
+                     local txt = string.lower(v.ObjectText .. " " .. v.ActionText)
+                     if string.find(txt, "steal") or string.find(txt, "take") or string.find(txt, "egg") then
+                        fireproximityprompt(v)
                      end
                   end
                end
             end)
-            task.wait(0.5)
          end
       end)
    end,
 })
 
+-- تبويب السرعة واللاعبين
 local PlayerTab = Window:CreateTab("Player ⚡", 4483362458)
 
--- Speed Slider
 PlayerTab:CreateSlider({
    Name = "WalkSpeed",
    Range = {16, 200},
    Increment = 1,
    Suffix = "Speed",
    CurrentValue = 16,
-   Flag = "SpeedSlider",
    Callback = function(Value)
-      WalkSpeedValue = Value
-      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+         LocalPlayer.Character.Humanoid.WalkSpeed = Value
       end
    end,
 })
 
--- Jump Slider
 PlayerTab:CreateSlider({
    Name = "JumpPower",
    Range = {50, 300},
    Increment = 5,
    Suffix = "Power",
    CurrentValue = 50,
-   Flag = "JumpSlider",
    Callback = function(Value)
-      JumpPowerValue = Value
-      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-         game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+         LocalPlayer.Character.Humanoid.JumpPower = Value
       end
    end,
 })
 
--- Re-apply on Respawn
-game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-   char:WaitForChild("Humanoid")
-   char.Humanoid.WalkSpeed = WalkSpeedValue
-   char.Humanoid.JumpPower = JumpPowerValue
-end)
-
 Rayfield:Notify({
-   Title = "Script Loaded",
-   Content = "Steal an Egg Script is ready to use!",
-   Duration = 5,
-   Image = 4483362458,
+   Title = "Script Loaded Successfully",
+   Content = "Enjoy lag-free stealing!",
+   Duration = 4,
 })
